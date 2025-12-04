@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "542180492010",
+    "project_id": "studyhub-2ecac",
+    "storage_bucket": "studyhub-2ecac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:542180492010:android:31a32a878e78c33db98d93",
+        "android_client_info": {
+          "package_name": "com.example.studyplannerapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "542180492010-qiokncte8p0clohldqqkpa5vs0qv97b1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.studyplannerapp",
+            "certificate_hash": "51a8307a5c141c9b645929a3fcc535adf9f6a188"
+          }
+        },
+        {
+          "client_id": "542180492010-dbvquthqpa1ks1qobf81vib4jas43kg9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUbjH9gEADtT9duNUmOs7zbIwG0nW9O4U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "542180492010-dbvquthqpa1ks1qobf81vib4jas43kg9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
