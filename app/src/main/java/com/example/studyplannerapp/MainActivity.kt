@@ -1,5 +1,6 @@
 package com.example.studyplannerapp
 
+import GoogleLoginScreen
 import StudyplannerappTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -110,7 +111,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier,themeManager: ThemePref
             )
         }
     }
-}
+}/*
 @Composable
 fun GoogleLoginScreen(
     onGoogleLoginClick: () -> Unit
@@ -140,3 +141,5 @@ fun GoogleLoginScreen(
         }
     }
 }
+*/
+
