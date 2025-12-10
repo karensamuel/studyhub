@@ -1,6 +1,5 @@
 package com.example.studyplannerapp.data.repository
 
-
 import com.example.studyplannerapp.data.local.dao.TaskDao
 import com.example.studyplannerapp.data.local.entity.Task
 import com.example.studyplannerapp.data.remote.FirestoreService
@@ -20,25 +19,35 @@ class TaskRepository(
 
     suspend fun addTask(task: Task, user: FirebaseUser?) {
         val userId = user?.uid ?: return
-        val taskWithUser = task.copy(userId = userId)
+        val taskWithUser = task.copy(
+            userId = userId,
+            updatedAt = System.currentTimeMillis()
+        )
 
-        // 1) Save to room immediately
-        dao.insert(taskWithUser)
+        val newId = dao.upsert(taskWithUser).toInt()
+        val finalTask = taskWithUser.copy(id = newId)
 
-        // 2) Sync to Firestore
         firestore.getUserTasksCollection(userId)
-            .document(taskWithUser.id.toString())
-            .set(taskWithUser)
+            .document(finalTask.id.toString())
+            .set(finalTask)
             .await()
     }
 
     suspend fun updateTask(task: Task, user: FirebaseUser?) {
         val userId = user?.uid ?: return
-        dao.update(task)
+        var taskToUpdate = task.copy(updatedAt = System.currentTimeMillis())
+
+        // If the task has a default ID, it means we need to insert it and get the real ID.
+        if (taskToUpdate.id == 0) {
+            val newId = dao.upsert(taskToUpdate).toInt()
+            taskToUpdate = taskToUpdate.copy(id = newId)
+        } else {
+            dao.upsert(taskToUpdate)
+        }
 
         firestore.getUserTasksCollection(userId)
-            .document(task.id.toString())
-            .set(task)
+            .document(taskToUpdate.id.toString())
+            .set(taskToUpdate)
             .await()
     }
 
@@ -55,23 +64,26 @@ class TaskRepository(
     suspend fun clearAll(user: FirebaseUser?) {
         val userId = user?.uid ?: return
 
-        // Clear room
         dao.clearTasksForUser(userId)
 
-        // Clear Firestore
         val collection = firestore.getUserTasksCollection(userId)
         val snapshot = collection.get().await()
         snapshot.documents.forEach { it.reference.delete() }
     }
 
-    // Download Firestore → Room on login
     suspend fun syncFromFirestore(user: FirebaseUser?) = withContext(Dispatchers.IO) {
         val userId = user?.uid ?: return@withContext
+        val lastSync = dao.getLastUpdateTimestamp(userId) ?: 0L
 
-        val snapshot = firestore.getUserTasksCollection(userId).get().await()
+        val snapshot = firestore.getUserTasksCollection(userId)
+            .whereGreaterThan("updatedAt", lastSync)
+            .get()
+            .await()
 
-        val tasks = snapshot.documents.mapNotNull { it.toObject(Task::class.java) }
+        val remoteTasks = snapshot.documents.mapNotNull { it.toObject(Task::class.java) }
 
-        dao.replaceAllForUser(userId, tasks)
+        if (remoteTasks.isNotEmpty()) {
+            dao.upsertAll(remoteTasks)
+        }
     }
 }

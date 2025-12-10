@@ -12,5 +12,6 @@ data class Task(
     val deadline: Long = 0L,
     val isFinished: Boolean = false,
     val logTime: Long = 0L,
-    val userId: String = ""
+    val userId: String = "",
+    val updatedAt: Long = 0L
 )
