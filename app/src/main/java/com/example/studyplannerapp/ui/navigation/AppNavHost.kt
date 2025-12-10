@@ -35,11 +35,14 @@ fun AppNavHost(
      * AUTH FLOW
      */
     if (!isLoggedIn) {
+        val viewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
+
         NavHost(navController, startDestination = NavRoutes.Login.route) {
             composable(NavRoutes.Login.route) {
                 GoogleLoginScreen(
                     onGoogleLoginClick = onGoogleLogin,
-                    modifier = Modifier
+                    modifier = Modifier,
+                    viewModel = viewModel
                 )
             }
         }

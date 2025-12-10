@@ -21,10 +21,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.studyplannerapp.viewmodel.TaskViewModel
 
 @Composable
 fun GoogleLoginScreen(
     onGoogleLoginClick: () -> Unit,
+    viewModel: TaskViewModel,
     modifier: Modifier
 ) {
     // The main screen column for the title/icon and the card

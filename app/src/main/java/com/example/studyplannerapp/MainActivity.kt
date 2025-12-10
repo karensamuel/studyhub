@@ -11,18 +11,19 @@ import androidx.compose.runtime.getValue
 import androidx.room.Room
 import com.example.studyplannerapp.data.local.database.AppDatabase
 import com.example.studyplannerapp.data.remote.AuthRepository
-import com.example.studyplannerapp.data.prefrences.ThemePreferenceManager
 import com.example.studyplannerapp.data.remote.FirestoreService
+import com.example.studyplannerapp.data.prefrences.ThemePreferenceManager
 import com.example.studyplannerapp.data.repository.TaskRepository
 import com.example.studyplannerapp.ui.navigation.AppNavHost
 import com.example.studyplannerapp.viewmodel.TaskViewModelFactory
+import com.example.studyplannerapp.viewmodel.TaskViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.GoogleAuthProvider
+import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : ComponentActivity() {
 
-    // Make database a companion object so it's accessible globally (safe for singletons)
     companion object {
         lateinit var taskDatabase: AppDatabase
             private set
@@ -30,6 +31,9 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var themeManager: ThemePreferenceManager
     private lateinit var authRepository: AuthRepository
+    private lateinit var firestore: FirestoreService
+    private lateinit var taskRepository: TaskRepository
+    private lateinit var taskViewModelFactory: TaskViewModelFactory
 
     // Google Sign-In launcher
     private val launcher = registerForActivityResult(
@@ -43,7 +47,12 @@ class MainActivity : ComponentActivity() {
             authRepository.getAuthInstance()
                 .signInWithCredential(credential)
                 .addOnCompleteListener(this) { signInTask ->
-                    if (!signInTask.isSuccessful) {
+                    if (signInTask.isSuccessful) {
+                        // Sync Firestore → Room after login
+                        val viewModel = ViewModelProvider(this, taskViewModelFactory)
+                            .get(TaskViewModel::class.java)
+                        viewModel.syncFromCloud()
+                    } else {
                         signInTask.exception?.printStackTrace()
                     }
                 }
@@ -51,33 +60,41 @@ class MainActivity : ComponentActivity() {
             e.printStackTrace()
         }
     }
-    val firestore = FirestoreService()
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize Room Database (singleton)
+        // Initialize Room Database
         taskDatabase = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
             "study_planner_db"
         )
-            .fallbackToDestructiveMigration() // Only for development! Remove in production
+            .fallbackToDestructiveMigration()
             .build()
 
+        // Initialize other dependencies
         themeManager = ThemePreferenceManager(applicationContext)
         authRepository = AuthRepository(applicationContext)
-        val taskRepository = TaskRepository(
+        firestore = FirestoreService()
+        taskRepository = TaskRepository(
             dao = taskDatabase.taskDao(),
             firestore = firestore
         )
-
-        val taskViewModelFactory = TaskViewModelFactory(
+        taskViewModelFactory = TaskViewModelFactory(
             repository = taskRepository,
             authRepository = authRepository
         )
+
+        // Auto-sync if user is already logged in
+        authRepository.currentUser.value?.let {
+            val viewModel = ViewModelProvider(this, taskViewModelFactory)
+                .get(TaskViewModel::class.java)
+            viewModel.syncFromCloud()
+        }
+
+        // Compose content
         setContent {
             val isDark by themeManager.isDarkThemeEnabled.collectAsState(initial = false)
             val currentUser by authRepository.currentUser.collectAsState(initial = null)
@@ -85,18 +102,13 @@ class MainActivity : ComponentActivity() {
             StudyplannerappTheme(darkTheme = isDark) {
                 AppNavHost(
                     isLoggedIn = currentUser != null,
-                    onGoogleLogin = {
-                        launcher.launch(authRepository.getGoogleSignInIntent())
-                    },
-                    onLogout = {
-                        authRepository.signOut()
-                    },
+                    onGoogleLogin = { launcher.launch(authRepository.getGoogleSignInIntent()) },
+                    onLogout = { authRepository.signOut() },
                     themeManager = themeManager,
                     isDark = isDark,
                     authRepository = authRepository,
-                    taskViewModelFactory = taskViewModelFactory     // ← NEW
+                    taskViewModelFactory = taskViewModelFactory
                 )
-
             }
         }
     }

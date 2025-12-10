@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "542180492010-j7afik5qfjbggq1o7f771l7rvokd3hg7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.studyplannerapp",
+            "certificate_hash": "86092ef94c695b769e59d8f43c566c1cb6095e9d"
+          }
+        },
+        {
           "client_id": "542180492010-qiokncte8p0clohldqqkpa5vs0qv97b1.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
