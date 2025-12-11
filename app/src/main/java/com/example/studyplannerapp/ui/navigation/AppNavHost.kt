@@ -1,10 +1,18 @@
 package com.example.studyplannerapp.ui.navigation
 
 import GoogleLoginScreen
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,6 +26,7 @@ import com.example.studyplannerapp.ui.screens.StudyHubScreen
 import com.example.studyplannerapp.viewmodel.TaskViewModel
 import com.example.studyplannerapp.viewmodel.TaskViewModelFactory
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavHost(
     isLoggedIn: Boolean,
@@ -25,9 +34,8 @@ fun AppNavHost(
     onLogout: () -> Unit,
     themeManager: ThemePreferenceManager,
     isDark: Boolean,
-    authRepository:AuthRepository,
+    authRepository: AuthRepository,
     taskViewModelFactory: TaskViewModelFactory
-
 ) {
     val navController = rememberNavController()
 
@@ -50,61 +58,96 @@ fun AppNavHost(
     }
 
     /**
-     * MAIN APP FLOW WITH BOTTOM NAVIGATION
+     * MAIN APP FLOW
      */
+    val mainViewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
+
+    // 1. Observe tasks
+    val tasks by mainViewModel.allTasks.collectAsState(initial = emptyList())
+
+    // 2. Calculate both counts
+    val totalCount = tasks.size
+    val completedCount = tasks.count { it.isFinished }
+
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "<study-app/>",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
+                actions = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 16.dp)
+                    ) {
+                        // 3. Display as "X/Y Completed"
+                        Text(
+                            text = "$completedCount/$totalCount Completed",
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Completed Tasks",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                )
+            )
+        },
         bottomBar = { BottomBar(navController) }
     ) { innerPadding ->
 
-        // Main NavHost
         NavHost(
             navController = navController,
             startDestination = NavRoutes.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-
             composable(NavRoutes.Home.route) {
-                val viewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
                 StudyHubScreen(
                     onEditTask = { task ->
                         navController.navigate(NavRoutes.CreateTask.route + "/${task.id}")
                     },
-                    viewModel = viewModel
+                    viewModel = mainViewModel
                 )
             }
 
             composable(NavRoutes.CreateTask.route + "/{taskId}") { backStack ->
                 val taskId = backStack.arguments?.getString("taskId")
-
-                val viewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
-
                 CreateNewTaskScreen(
-                    taskId = taskId ,
+                    taskId = taskId,
                     onCancel = { navController.popBackStack() },
                     onTaskCreated = { navController.popBackStack() },
-                    viewModel = viewModel
+                    viewModel = mainViewModel
                 )
             }
-            composable(NavRoutes.CreateTask.route) {
-                val viewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
 
+            composable(NavRoutes.CreateTask.route) {
                 CreateNewTaskScreen(
                     taskId = null,
                     onCancel = { navController.popBackStack() },
                     onTaskCreated = { navController.popBackStack() },
-                    viewModel = viewModel
+                    viewModel = mainViewModel
                 )
             }
-            composable(NavRoutes.Settings.route) {
-                val viewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
 
+            composable(NavRoutes.Settings.route) {
                 SettingsScreen(
                     onSignOut = onLogout,
                     themeManager = themeManager,
                     isDark = isDark,
                     modifier = Modifier,
                     authRepository = authRepository,
-                    viewModel = viewModel
+                    viewModel = mainViewModel
                 )
             }
         }
